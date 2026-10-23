@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>政大職涯冒險譚：企業征途</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151e32;
+      --card-inner: #0d1527;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #f59e0b;
+      --success: #10b981;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #24324f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 1rem; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 500px; min-height: 100vh; display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem; }
+    
+    header { background: var(--card-bg); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .badge { background: #3730a3; color: #c7d2fe; font-size: 0.75rem; padding: 3px 8px; border-radius: 999px; display: inline-block; }
+    .exp-bar-bg { background: #1e293b; height: 10px; border-radius: 5px; margin-top: 8px; overflow: hidden; }
+    .exp-bar-fill { background: linear-gradient(90deg, #6366f1, #ec4899); height: 100%; width: 0%; transition: width 0.4s ease; }
+
+    .card { background: var(--card-bg); padding: 1.2rem; border-radius: 14px; border: 1px solid var(--border); }
+    .btn { background: var(--primary); color: white; border: none; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.2s; }
+    .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-secondary { background: #24324f; }
+    .btn-secondary:hover { background: #33446b; }
+
+    input, select { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card-inner); color: white; margin: 0.5rem 0 1rem; font-size: 0.9rem; }
+
+    /* 地圖區域樣式 */
+    .map-container {
+      background: radial-gradient(circle at center, #172554 0%, #090d16 100%);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      position: relative;
+      padding: 0.5rem;
+      overflow: hidden;
+    }
+    .node-group { cursor: pointer; transition: opacity 0.2s; }
+    .node-group:hover { opacity: 0.9; }
+    .pulse-ring {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { r: 19; opacity: 0.9; }
+      100% { r: 32; opacity: 0; }
+    }
+
+    /* 角色位置指示標記 */
+    #player-pin {
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      filter: drop-shadow(0 2px 6px rgba(245, 158, 11, 0.9));
+      pointer-events: none;
+    }
+
+    /* 地圖下方選中區域卡片 */
+    .map-panel {
+      margin-top: 0.6rem;
+      background: var(--card-inner);
+      border-radius: 10px;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      display: none;
+      animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .company-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .company-tag { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; }
+
+    .inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+    .item-slot { background: var(--card-inner); border: 1px dashed var(--border); border-radius: 8px; padding: 0.7rem 0.4rem; text-align: center; font-size: 0.8rem; cursor: pointer; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; padding: 1rem; z-index: 100; }
+    .modal { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; max-width: 420px; width: 100%; border: 1px solid var(--border); }
+    .modal h3 { margin-bottom: 0.5rem; color: var(--accent); }
+    .modal ul { margin-left: 1.2rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+    .timestamp { font-family: monospace; color: var(--accent); font-size: 1.3rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 狀態頂欄 -->
+  <header id="status-bar" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <span class="badge" id="player-role-badge">學院職業</span>
+        <strong id="player-name-display" style="margin-left: 6px;">冒險者</strong>
+      </div>
+      <div>LV. <span id="player-level" style="color: var(--accent); font-weight: bold;">1</span></div>
+    </div>
+    <div class="exp-bar-bg">
+      <div class="exp-bar-fill" id="exp-fill"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">
+      <span>EXP: <span id="exp-text">0</span> / 100（滿 80 EXP 即可兌獎）</span>
+      <span id="rank-title">新手見習生</span>
+    </div>
+  </header>
+
+  <!-- 階段 1：新手村創建角色（依政大 12 學院分類） -->
+  <section id="scene-create" class="card">
+    <h2>🏰 四維堂・冒險者公會</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+      歡迎來到 2027 政大徵才月《企業征途》。請登錄你的冒險者名冊並選擇所屬學院轉職，系統將為你點亮推薦的企業村莊：
+    </p>
+    <div style="margin-top: 1rem;">
+      <label style="font-size: 0.9rem;">冒險者稱號：</label>
+      <input type="text" id="input-name" placeholder="例如：貓空浪漫旅人" value="政大冒險家">
+
+      <label style="font-size: 0.9rem;">選擇所屬學院與初始職業：</label>
+      <select id="input-role">
+        <option value="文學院｜敘事吟遊詩人" data-recom="lit">📜 文學院｜敘事吟遊詩人</option>
+        <option value="外語學院｜跨界外交遊俠" data-recom="global">🏹 外語學院｜跨界外交遊俠</option>
+        <option value="傳播學院｜光影幻術師" data-recom="media">🎬 傳播學院｜光影幻術師</option>
+        <option value="商學院｜商業領航員" data-recom="beauty">🧭 商學院｜商業領航員</option>
+        <option value="社會科學學院｜洞察賢者" data-recom="fin">🏛️ 社會科學學院｜洞察賢者</option>
+        <option value="法學院｜秩序聖騎士" data-recom="fin">⚖️ 法學院｜秩序聖騎士</option>
+        <option value="理學院｜真理鍊金術師" data-recom="tech">🧪 理學院｜真理鍊金術師</option>
+        <option value="國際事務學院｜星際縱橫家" data-recom="global">🌐 國際事務學院｜星際縱橫家</option>
+        <option value="教育學院｜心靈導師" data-recom="lit">🌱 教育學院｜心靈導師</option>
+        <option value="資訊學院｜代碼大法師" data-recom="tech">⚡ 資訊學院｜代碼大法師</option>
+        <option value="創新國際學院｜跨域開拓者" data-recom="media">🚀 創新國際學院｜跨域開拓者</option>
+        <option value="X實驗學院｜無界創造者" data-recom="beauty">✨ X實驗學院｜無界創造者</option>
+      </select>
+
+      <button class="btn" onclick="startGame()">領取裝備・展開政大企業地圖</button>
+    </div>
+  </section>
+
+  <!-- 階段 2：主線地圖與副本探索 -->
+  <section id="scene-main" style="display: none; flex-direction: column; gap: 1rem;">
+    <!-- 數位背包 -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>🎒 數位背包（初始物資）</h3>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">點擊道具可開啟攻略</span>
+      </div>
+      <div class="inventory-grid">
+        <div class="item-slot" onclick="openModal('card')" style="border-color: var(--accent); color: var(--accent);">📜<br>破冰攻略卡</div>
+        <div class="item-slot" onclick="openModal('tips')">💡<br>面試錦囊</div>
+        <div class="item-slot" onclick="openModal('info')">ℹ️<br>通關密碼表</div>
+      </div>
+    </div>
+
+    <!-- 互動地圖核心區 -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+        <h3>🗺️ 政大博覽會・八大副本領域</h3>
+        <span style="font-size: 0.75rem; color: var(--accent);">✨ 金色光環為學院推薦首選</span>
+      </div>
+
+      <div class="map-container">
+        <svg id="rpg-map" viewBox="0 0 360 440" style="width: 100%; height: auto; display: block;">
+          <!-- 路網連線 -->
+          <g stroke="#334155" stroke-width="2.5" stroke-dasharray="4">
+            <line x1="180" y1="45" x2="75" y2="125" />
+            <line x1="180" y1="45" x2="180" y2="125" />
+            <line x1="180" y1="45" x2="285" y2="125" />
+            
+            <line x1="75" y1="125" x2="75" y2="245" />
+            <line x1="180" y1="125" x2="180" y2="245" />
+            <line x1="285" y1="125" x2="285" y2="245" />
+            
+            <line x1="75" y1="125" x2="180" y2="245" />
+            <line x1="285" y1="125" x2="180" y2="245" />
+
+            <line x1="75" y1="245" x2="180" y2="365" />
+            <line x1="180" y1="245" x2="180" y2="365" />
+            <line x1="285" y1="245" x2="180" y2="365" />
+          </g>
+
+          <!-- 學院推薦光環 -->
+          <circle id="recom-ring" class="pulse-ring" cx="180" cy="125" r="20" fill="none" stroke="#f59e0b" stroke-width="2.5" style="display: none;" />
+
+          <!-- 0. 起點：四維堂新手村 -->
+          <g class="node-group" onclick="selectLocation('start', 180, 45)">
+            <circle id="node-start-circle" cx="180" cy="45" r="20" fill="#6366f1" />
+            <text x="180" y="51" text-anchor="middle" font-size="14">🏰</text>
+            <text x="180" y="77" text-anchor="middle" font-size="10.5" fill="#f8fafc" font-weight="600">四維堂新手村</text>
+            <text id="badge-start" x="180" y="89" text-anchor="middle" font-size="8.5" fill="#a5b4fc">履歷快檢 (+20)</text>
+          </g>
+
+          <!-- 1. 文學出版與文創村 -->
+          <g class="node-group" onclick="selectLocation('lit', 75, 125)">
+            <circle id="node-lit-circle" cx="75" cy="125" r="19" fill="#1e293b" stroke="#a855f7" stroke-width="2.5" />
+            <text x="75" y="131" text-anchor="middle" font-size="13">📚</text>
+            <text x="75" y="157" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">文學文創村</text>
+            <text id="badge-lit" x="75" y="169" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 2. 美妝時尚與快消村 -->
+          <g class="node-group" onclick="selectLocation('beauty', 180, 125)">
+            <circle id="node-beauty-circle" cx="180" cy="125" r="19" fill="#1e293b" stroke="#ec4899" stroke-width="2.5" />
+            <text x="180" y="131" text-anchor="middle" font-size="13">💄</text>
+            <text x="180" y="157" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">美妝時尚村</text>
+            <text id="badge-beauty" x="180" y="169" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 3. 金融保險與法遵村 -->
+          <g class="node-group" onclick="selectLocation('fin', 285, 125)">
+            <circle id="node-fin-circle" cx="285" cy="125" r="19" fill="#1e293b" stroke="#eab308" stroke-width="2.5" />
+            <text x="285" y="131" text-anchor="middle" font-size="13">🛡️</text>
+            <text x="285" y="157" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">金融保險村</text>
+            <text id="badge-fin" x="285" y="169" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 4. 傳播影視與公關村 -->
+          <g class="node-group" onclick="selectLocation('media', 75, 245)">
+            <circle id="node-media-circle" cx="75" cy="245" r="19" fill="#1e293b" stroke="#f97316" stroke-width="2.5" />
+            <text x="75" y="251" text-anchor="middle" font-size="13">🎬</text>
+            <text x="75" y="277" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">傳播公關村</text>
+            <text id="badge-media" x="75" y="289" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 5. 數位科技與軟體村 -->
+          <g class="node-group" onclick="selectLocation('tech', 180, 245)">
+            <circle id="node-tech-circle" cx="180" cy="245" r="19" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5" />
+            <text x="180" y="251" text-anchor="middle" font-size="13">⚡</text>
+            <text x="180" y="277" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">數位科技村</text>
+            <text id="badge-tech" x="180" y="289" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 6. 跨國貿易與航空村 -->
+          <g class="node-group" onclick="selectLocation('global', 285, 245)">
+            <circle id="node-global-circle" cx="285" cy="245" r="19" fill="#1e293b" stroke="#14b8a6" stroke-width="2.5" />
+            <text x="285" y="251" text-anchor="middle" font-size="13">✈️</text>
+            <text x="285" y="277" text-anchor="middle" font-size="10" fill="#e2e8f0" font-weight="600">跨國航空村</text>
+            <text id="badge-global" x="285" y="289" text-anchor="middle" font-size="8.5" fill="#94a3b8">+30 EXP</text>
+          </g>
+
+          <!-- 7. 終點：四維堂公會結算所 -->
+          <g class="node-group" onclick="selectLocation('end', 180, 365)">
+            <circle id="node-end-circle" cx="180" cy="365" r="21" fill="#1e293b" stroke="#f59e0b" stroke-width="2.5" />
+            <text x="180" y="372" text-anchor="middle" font-size="15">🏆</text>
+            <text x="180" y="399" text-anchor="middle" font-size="11" fill="#f8fafc" font-weight="600">公會結算所 (終點)</text>
+            <text id="badge-end" x="180" y="412" text-anchor="middle" font-size="9" fill="#f59e0b">滿 80 EXP 解鎖抽獎</text>
+          </g>
+
+          <!-- 冒險者當前位置 Pin -->
+          <g id="player-pin" transform="translate(180, 45)">
+            <circle cx="0" cy="-28" r="10" fill="#f59e0b" />
+            <polygon points="-5,-20 5,-20 0,-13" fill="#f59e0b" />
+            <text x="0" y="-25" text-anchor="middle" font-size="7.5" fill="#000" font-weight="bold">YOU</text>
+          </g>
+        </svg>
+
+        <!-- 地圖點擊詳細互動面板 -->
+        <div class="map-panel" id="location-panel">
+          <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
+            <div>
+              <h4 id="panel-title" style="color: var(--accent); font-size: 1rem;">地點名稱</h4>
+              <p id="panel-location-sub" style="font-size: 0.75rem; color: #38bdf8; margin-top: 2px;">展區位置</p>
+            </div>
+            <span id="panel-status" class="badge">未解鎖</span>
+          </div>
+
+          <p id="panel-desc" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 8px; line-height: 1.4;">說明</p>
+
+          <!-- 駐村代表企業名單 -->
+          <div id="panel-companies-wrap" style="margin-top: 8px;">
+            <span style="font-size: 0.75rem; color: var(--text-muted);">🏢 駐村代表企業與組織：</span>
+            <div class="company-tags" id="panel-companies"></div>
+          </div>
+
+          <!-- 解鎖輸入介面 -->
+          <div id="panel-action" style="margin-top: 0.8rem; border-top: 1px dashed var(--border); padding-top: 0.8rem;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">與該區任一企業互動後，輸入攤位通關密語：</label>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem;">
+              <input type="text" id="panel-code-input" placeholder="輸入密語" style="margin: 0; padding: 0.5rem;">
+              <button class="btn" style="width: auto; margin: 0; padding: 0.5rem 1rem; white-space: nowrap;" onclick="submitPanelCode()">討伐核銷</button>
+            </div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 5px;" id="panel-tip">提示</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 前往結算按鈕 -->
+    <button class="btn btn-secondary" onclick="goSettle()">前往四維堂公會結算所（出示核銷畫面）→</button>
+  </section>
+
+  <!-- 階段 3：公會結算所畫面 -->
+  <section id="scene-settle" class="card" style="display: none;">
+    <h2>🏆 四維堂・公會結算所</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+      請向四維堂服務台出示此畫面，由工作人員確認「動態時間戳印」並點擊核銷領取周邊與摸彩券。
+    </p>
+
+    <div style="text-align: center; margin: 1.5rem 0; padding: 1.2rem; background: var(--card-inner); border-radius: 10px; border: 1px solid var(--border);">
+      <div style="font-size: 0.8rem; color: var(--text-muted);">動態防偽時間戳印</div>
+      <div class="timestamp" id="dynamic-time">12:00:00.00</div>
+      <div style="margin-top: 0.75rem; font-weight: bold; font-size: 1rem;" id="settle-summary">冒險者</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;" id="settle-visited">已探索村莊：0 處</div>
+      <div style="font-size: 0.9rem; margin-top: 0.5rem;" id="settle-status-msg">狀態</div>
+    </div>
+
+    <button class="btn" id="verify-btn" onclick="verifyReward()">工作人員點擊確認核銷</button>
+    <button class="btn btn-secondary" style="margin-top: 0.5rem;" onclick="backToTasks()">返回冒險地圖繼續探索</button>
+  </section>
+</div>
+
+<!-- Modal 彈窗 -->
+<div class="modal-overlay" id="modal" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modal-title">裝備道具</h3>
+    <div id="modal-content" style="margin: 1rem 0;"></div>
+    <button class="btn" onclick="closeModal()">收回背包</button>
+  </div>
+</div>
+
+<script>
+  let currentLocationId = 'start';
+  let state = {
+    name: '',
+    role: '',
+    exp: 0,
+    locations: {
+      start: {
+        title: '🏰 四維堂・新手整備村',
+        pos: '📍 展區位置：四維堂內部專區',
+        desc: '冒險起點！除了領取初始裝備，現場設有「履歷快檢與職涯諮詢站」，完成一次快檢即可獲得初始經驗值。',
+        companies: ['政大職涯中心', '履歷健檢顧問團', 'Prism 光影特展區'],
+        code: 'START2027',
+        exp: 20,
+        done: false,
+        coords: [180, 45]
+      },
+      lit: {
+        title: '📚 文學出版與文創村',
+        pos: '📍 展區位置：羅馬廣場西側',
+        desc: '匯聚圖書出版、線上教育、文化策展與藝文內容產業。非常適合喜歡文字企劃、故事轉譯與教育推廣的冒險者！',
+        companies: ['天下文化 / 遠見', '誠品生活', '親子天下', '故宮文創 / 藝文策展', 'Hahow 好學校'],
+        code: 'BOOK2027',
+        exp: 30,
+        done: false,
+        coords: [75, 125]
+      },
+      beauty: {
+        title: '💄 美妝時尚與快消村',
+        pos: '📍 展區位置：八角亭與麥側大道',
+        desc: '集結國際彩妝保養集團、時尚零售與 FMCG 快速消費品大廠。主打品牌行銷、社群電商、通路陳列與儲備幹部 (MT)！',
+        companies: ['台灣萊雅 L\'Oréal', '雅詩蘭黛集團', '台灣資生堂', '聯合利華 Unilever', 'UNIQLO / 迅銷集團'],
+        code: 'BEAUTY2027',
+        exp: 30,
+        done: false,
+        coords: [180, 125]
+      },
+      fin: {
+        title: '🛡️ 金融保險與法遵村',
+        pos: '📍 展區位置：行政大樓前廣場',
+        desc: '各大金控、壽險產險、精算風控與法務合規重鎮。不限商管背景，極度歡迎外語、法律、社科與數理跨域人才加入 MA 計畫！',
+        companies: ['國泰金控 / 國泰人壽', '富邦金控 / 富邦產險', '南山人壽', '中信金控', '安聯人壽'],
+        code: 'FIN2027',
+        exp: 30,
+        done: false,
+        coords: [285, 125]
+      },
+      media: {
+        title: '🎬 傳播影視與公關村',
+        pos: '📍 展區位置：言論廣場周邊',
+        desc: '廣告代理商、公關顧問、新媒體影音與數位內容團隊。尋找具備社群敏感度、影音企劃與跨領域溝通能力的創意人才！',
+        companies: ['奧美集團 Ogilvy', '電通集團 dentsu', 'PressPlay 瑞奧', '女人迷 Womany', '華納音樂 / 影視發行'],
+        code: 'MEDIA2027',
+        exp: 30,
+        done: false,
+        coords: [75, 245]
+      },
+      tech: {
+        title: '⚡ 數位科技與軟體村',
+        pos: '📍 展區位置：風雩樓與體育館前',
+        desc: '半導體、雲端軟體、AI 應用與網路平台企業。除了軟體工程師，更大量招募 UI/UX、產品經理 (PM) 與跨國業務人才！',
+        companies: ['台積電 TSMC', 'LINE Taiwan', 'Google 台灣', '趨勢科技 TrendMicro', '蝦皮購物 Shopee'],
+        code: 'TECH2027',
+        exp: 30,
+        done: false,
+        coords: [180, 245]
+      },
+      global: {
+        title: '✈️ 跨國貿易與航空村',
+        pos: '📍 展區位置：合作社與噴水池廣場',
+        desc: '國際航空、外商物流、跨國製造與駐台商會組織。需要大量具備第二外語（法/西/德/日/韓/東南亞語）與跨文化協調力的人才！',
+        companies: ['星宇航空 / 長榮航空', 'DHL 國際快遞', '法國工商會攤位', '迪卡儂 Decathlon', '外貿協會 TAITRA'],
+        code: 'FLY2027',
+        exp: 30,
+        done: false,
+        coords: [285, 245]
+      },
+      end: {
+        title: '🏆 四維堂・公會結算所',
+        pos: '📍 展區位置：四維堂正門學生服務台',
+        desc: '當經驗值累積達 80 EXP（約完成 3 個區域互動），即可返回此處核銷並領取徵才月限量周邊與摸彩資格！',
+        companies: ['學生服務台兌獎處', '一番賞抽獎區', 'Prism 拍立得紀念站'],
+        coords: [180, 365]
+      }
+    }
+  };
+
+  function startGame() {
+    state.name = document.getElementById('input-name').value || '政大冒險家';
+    const roleSelect = document.getElementById('input-role');
+    state.role = roleSelect.value;
+    const recomKey = roleSelect.options[roleSelect.selectedIndex].getAttribute('data-recom');
+
+    document.getElementById('scene-create').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'block';
+    document.getElementById('scene-main').style.display = 'flex';
+
+    document.getElementById('player-name-display').innerText = state.name;
+    document.getElementById('player-role-badge').innerText = state.role;
+
+    // 根據所選政大學院點亮對應推薦村莊的呼吸光環
+    const ring = document.getElementById('recom-ring');
+    if (recomKey && state.locations[recomKey]) {
+      ring.style.display = 'block';
+      ring.setAttribute('cx', state.locations[recomKey].coords[0]);
+      ring.setAttribute('cy', state.locations[recomKey].coords[1]);
+      // 開局直接幫玩家選中推薦村莊展示
+      selectLocation(recomKey, state.locations[recomKey].coords[0], state.locations[recomKey].coords[1]);
+    } else {
+      selectLocation('start', 180, 45);
+    }
+
+    updateStatus();
+  }
+
+  function selectLocation(id, x, y) {
+    currentLocationId = id;
+    const pin = document.getElementById('player-pin');
+    pin.setAttribute('transform', `translate(${x}, ${y})`);
+
+    const loc = state.locations[id];
+    const panel = document.getElementById('location-panel');
+    document.getElementById('panel-title').innerText = loc.title;
+    document.getElementById('panel-location-sub').innerText = loc.pos;
+    document.getElementById('panel-desc').innerText = loc.desc;
+
+    // 渲染代表企業標籤
+    const compContainer = document.getElementById('panel-companies');
+    compContainer.innerHTML = (loc.companies || []).map(c => `<span class="company-tag">${c}</span>`).join('');
+
+    const status = document.getElementById('panel-status');
+    const action = document.getElementById('panel-action');
+    const tip = document.getElementById('panel-tip');
+
+    panel.style.display = 'block';
+
+    if (id === 'end') {
+      action.style.display = 'none';
+      status.innerText = state.exp >= 80 ? '✓ 可兌換獎勵' : '需滿 80 EXP';
+      status.style.background = state.exp >= 80 ? '#059669' : '#64748b';
+    } else {
+      tip.innerText = `💡 測試密語：請輸入 ${loc.code}`;
+      if (loc.done) {
+        status.innerText = '✓ 已討伐完成';
+        status.style.background = '#059669';
+        action.style.display = 'none';
+      } else {
+        status.innerText = `未探索 (+${loc.exp} EXP)`;
+        status.style.background = '#3730a3';
+        action.style.display = 'block';
+      }
+    }
+  }
+
+  function submitPanelCode() {
+    const input = document.getElementById('panel-code-input');
+    const val = input.value.trim().toUpperCase();
+    const loc = state.locations[currentLocationId];
+
+    if (!loc || loc.done) return;
+
+    if (val === loc.code) {
+      loc.done = true;
+      state.exp += loc.exp;
+      input.value = '';
+
+      // 更新節點視覺為綠色完成態
+      const circle = document.getElementById(`node-${currentLocationId}-circle`);
+      circle.setAttribute('fill', '#059669');
+      circle.setAttribute('stroke', '#34d399');
+
+      const badge = document.getElementById(`badge-${currentLocationId}`);
+      badge.textContent = '✓ 已完成';
+      badge.setAttribute('fill', '#10b981');
+
+      alert(`🎉 成功攻略「${loc.title}」！獲得 +${loc.exp} EXP！`);
+      selectLocation(currentLocationId, loc.coords[0], loc.coords[1]);
+      updateStatus();
+    } else {
+      alert(`密語不正確！測試期間可輸入：${loc.code}`);
+    }
+  }
+
+  function updateStatus() {
+    document.getElementById('exp-text').innerText = state.exp;
+    document.getElementById('exp-fill').style.width = Math.min(state.exp, 100) + '%';
+    const lvl = document.getElementById('player-level');
+    const rank = document.getElementById('rank-title');
+
+    if (state.exp >= 80) {
+      lvl.innerText = 'MAX';
+      rank.innerText = '傳奇跨域領航者';
+    } else if (state.exp >= 50) {
+      lvl.innerText = '3';
+      rank.innerText = '資深探險家';
+    } else if (state.exp >= 20) {
+      lvl.innerText = '2';
+      rank.innerText = '進階冒險者';
+    } else {
+      lvl.innerText = '1';
+      rank.innerText = '新手見習生';
+    }
+  }
+
+  function openModal(type) {
+    const modal = document.getElementById('modal');
+    const title = document.getElementById('modal-title');
+    const content = document.getElementById('modal-content');
+
+    if (type === 'card') {
+      title.innerText = '📜 攤位破冰攻略卡（依產業客製）';
+      content.innerHTML = `
+        <ul>
+          <li><strong>【通用破冰・問 HR】</strong><br>「身為人文/社科/跨領域背景的學生，貴公司在篩選履歷時最看重哪項軟實力或專案經驗？」</li>
+          <li><strong>【美妝快消 / 傳播出版・問部門】</strong><br>「面對近期社群趨勢與 AI 工具普及，行銷或內容企劃職位的工作日常有什麼轉變？」</li>
+          <li><strong>【金融保險 / 科技外商・問學長姐】</strong><br>「非本科系進入貴司 MA 或專案團隊，前半年最需要克服的挑戰是什麼？」</li>
+        </ul>
+      `;
+    } else if (type === 'tips') {
+      title.innerText = '💡 博覽會面試錦囊';
+      content.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">1. 開場可用 30 秒介紹自己的「科系＋一項跨領域實作經驗」。<br>2. 善用破冰攻略卡挑選 1~2 題深度問題，避免只問網路上查得到的薪資福利。<br>3. 聊完記得索取名片或掃描企業履歷投遞 QR Code，並請小天使提供通關密語！</p>`;
+    } else if (type === 'info') {
+      title.innerText = '🔑 Demo 測試用通關密語一覽';
+      content.innerHTML = `
+        <ul style="font-family: monospace;">
+          <li>四維堂新手村：<strong>START2027</strong> (+20 EXP)</li>
+          <li>文學出版文創村：<strong>BOOK2027</strong> (+30 EXP)</li>
+          <li>美妝時尚快消村：<strong>BEAUTY2027</strong> (+30 EXP)</li>
+          <li>金融保險法遵村：<strong>FIN2027</strong> (+30 EXP)</li>
+          <li>傳播影視公關村：<strong>MEDIA2027</strong> (+30 EXP)</li>
+          <li>數位科技軟體村：<strong>TECH2027</strong> (+30 EXP)</li>
+          <li>跨國貿易航空村：<strong>FLY2027</strong> (+30 EXP)</li>
+        </ul>
+      `;
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+  }
+
+  function goSettle() {
+    document.getElementById('scene-main').style.display = 'none';
+    document.getElementById('scene-settle').style.display = 'block';
+    document.getElementById('settle-summary').innerText = `${state.name}（${state.role}）`;
+
+    const visitedCount = Object.values(state.locations).filter(l => l.done).length;
+    document.getElementById('settle-visited').innerText = `已攻略展區：${visitedCount} 處 ｜ 總經驗值：${state.exp} EXP`;
+
+    const msg = document.getElementById('settle-status-msg');
+    const btn = document.getElementById('verify-btn');
+
+    if (state.exp >= 80) {
+      msg.innerHTML = `<span style="color: #10b981; font-weight: bold;">✅ 已達標！可領取限量周邊與抽獎券</span>`;
+      btn.disabled = false;
+      btn.style.background = '#6366f1';
+    } else {
+      msg.innerHTML = `<span style="color: #f59e0b;">⚠️ 尚差 ${80 - state.exp} EXP 解鎖兌獎（請至少完成 3 個展區任務）</span>`;
+      btn.disabled = true;
+      btn.style.background = '#334155';
+    }
+  }
+
+  function backToTasks() {
+    document.getElementById('scene-settle').style.display = 'none';
+    document.getElementById('scene-main').style.display = 'flex';
+  }
+
+  function verifyReward() {
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true;
+    btn.style.background = '#475569';
+    btn.innerText = '✓ 服務台已完成核銷登記';
+    alert('🎉 核銷成功！感謝參與政大徵才月企業征途！');
+  }
+
+  setInterval(() => {
+    const now = new Date();
+    const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0').slice(0, 2);
+    const elem = document.getElementById('dynamic-time');
+    if (elem) elem.innerText = timeStr;
+  }, 80);
+</script>
+
+</body>
+</html>
