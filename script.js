@@ -352,24 +352,23 @@ function updateJoystick(event) {
   const maxDistance = (bounds.width - knob.offsetWidth) / 2;
   let offsetX = event.clientX - centerX;
   let offsetY = event.clientY - centerY;
-  const distance = Math.hypot(offsetX, offsetY);
+  let distance = Math.hypot(offsetX, offsetY);
 
   if (distance > maxDistance) {
     offsetX = offsetX / distance * maxDistance;
     offsetY = offsetY / distance * maxDistance;
+    distance = maxDistance;
   }
   knob.style.transform =
     `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
 
-  const magnitude = Math.min(distance / maxDistance, 1);
-  if (magnitude < 0.12) {
+  if (distance / maxDistance < 0.12) {
     joystickVector.dx = 0;
     joystickVector.dy = 0;
     return;
   }
-  const speed = (magnitude - 0.12) / 0.88;
-  joystickVector.dx = offsetX / (distance || 1) * speed;
-  joystickVector.dy = offsetY / (distance || 1) * speed;
+  joystickVector.dx = offsetX / distance;
+  joystickVector.dy = offsetY / distance;
 }
 
 function startJoystick(event) {
@@ -381,7 +380,7 @@ function startJoystick(event) {
   updateJoystick(event);
   document.getElementById('player-avatar').classList.add('walking');
   moveInterval = setInterval(() => {
-    const speed = 1.95;
+    const speed = 1.8;
     if (joystickVector.dx || joystickVector.dy) {
       setPlayerPosition(
         state.playerX + joystickVector.dx * speed,
