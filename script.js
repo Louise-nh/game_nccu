@@ -21,8 +21,8 @@ const state = {
     start: {
       title: '🏰 四維堂・新手整備村',
       pos: '📍 座標：Si Wei Hall（四維堂正門與內部）',
-      desc: '冒險起點！除了領取初始裝備，四維堂內設有「履歷快檢」與「Prism 光影展區」，完成體驗即可領取首筆經驗值！',
-      companies: ['政大職涯中心', '履歷快檢顧問團', 'Prism 沉浸特展'],
+      desc: '冒險起點！除了領取初始裝備，四維堂內設有「履歷快檢」與「面試outfit check」，完成體驗即可領取首筆經驗值！',
+      companies: ['政大職涯中心', '履歷快檢顧問團', '面試服裝顧問團'],
       code: 'START2027',
       exp: 20,
       done: false,
@@ -30,7 +30,7 @@ const state = {
     },
     lit: {
       title: '📚 文學出版與文創村',
-      pos: '📍 座標：Main Library（中正圖書館前廣場）',
+      pos: '📍 座標：Main Library（中正圖書館前四維道）',
       desc: '匯聚圖書出版、線上教育、文化策展與藝文內容產業。適合熱愛文字企劃、故事轉譯與教育推廣的冒險者！',
       companies: ['誠品生活', '天下文化', '親子天下', 'Hahow 好學校', '藝文策展團隊'],
       code: 'BOOK2027',
@@ -40,7 +40,7 @@ const state = {
     },
     fin: {
       title: '🛡️ 金融保險與法遵村',
-      pos: '📍 座標：Administration Building（行政大樓前）',
+      pos: '📍 座標：Administration Building（行政大樓前四維道）',
       desc: '各大金控、壽險產險、精算風控與法務合規重鎮。不限商管背景，歡迎外語、法律、社科與數理跨域人才詢問 MA 計畫！',
       companies: ['國泰金控 / 國泰人壽', '富邦金控 / 富邦產險', '南山人壽', '中信金控', '安聯人壽'],
       code: 'FIN2027',
@@ -50,7 +50,7 @@ const state = {
     },
     beauty: {
       title: '💄 美妝時尚與快消村',
-      pos: '📍 座標：College of Commerce（商學院展區）',
+      pos: '📍 座標：College of Commerce（商學院前四維道）',
       desc: '國際彩妝保養集團、時尚零售與 FMCG 快速消費品大廠。主打品牌行銷、社群電商、公關與儲備幹部 (MT)！',
       companies: ["台灣萊雅 L'Oréal", '雅詩蘭黛集團', '資生堂 Shiseido', '聯合利華 Unilever', 'UNIQLO'],
       code: 'BEAUTY2027',
@@ -80,7 +80,7 @@ const state = {
     },
     tech: {
       title: '⚡ 數位科技與軟體村',
-      pos: '📍 座標：Information Building（資訊大樓展區）',
+      pos: '📍 座標：Information Building（資訊大樓前四維道）',
       desc: '半導體、雲端軟體、AI 應用與電商平台。除了研發工程師，亦招募大量產品經理 (PM)、UI/UX 與商業數據分析師！',
       companies: ['台積電 TSMC', 'Google 台灣', 'LINE Taiwan', '趨勢科技', '蝦皮購物 Shopee'],
       code: 'TECH2027',
