@@ -126,6 +126,11 @@ function startGame(isRestore = false) {
   document.getElementById('player-name-display').innerText = state.name;
   document.getElementById('avatar-name-tag').innerText = state.name;
   document.getElementById('player-role-badge').innerText = state.role;
+  const secondaryRoleDisplay = document.getElementById('player-secondary-role');
+  secondaryRoleDisplay.innerText = state.secondaryRole
+    ? `第二職業：${state.secondaryRole}`
+    : '';
+  secondaryRoleDisplay.style.display = state.secondaryRole ? 'block' : 'none';
 
   // 點亮所選學院的推薦建築
   document.querySelectorAll('.map-node').forEach(el => el.classList.remove('recommended'));
@@ -516,7 +521,7 @@ function goSettle() {
     state.studentId ? 'none' : 'block';
   const roleSummary = state.secondaryRole
     ? `主職業：${state.role}\n第二職業：${state.secondaryRole}`
-    : `職業：${state.role}`;
+    : `主職業：${state.role}`;
   document.getElementById('settle-summary').innerText =
     `${state.name}｜學號：${state.studentId || '舊存檔未提供'}\n${roleSummary}`;
 
