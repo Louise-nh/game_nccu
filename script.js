@@ -1,10 +1,16 @@
 let currentLocationId = 'start';
 let moveInterval = null;
+let saveTimeout = null;
+let rewardVerified = false;
+let isResetting = false;
 const keysPressed = {};
+const SAVE_KEY = 'nccu-career-adventure-save';
 
 const state = {
   name: '',
+  studentId: '',
   role: '',
+  secondaryRole: '',
   exp: 0,
   // 玩家在地圖上的百分比座標 (0 ~ 100)
   playerX: 49.5,
@@ -91,11 +97,27 @@ const state = {
 };
 
 // 開局初始化
-function startGame() {
-  state.name = document.getElementById('input-name').value || '政大冒險家';
+function startGame(isRestore = false) {
+  const studentIdInput = document.getElementById('input-student-id');
+  const studentId = studentIdInput.value.trim();
+  if (!isRestore && !studentId) {
+    alert('請先輸入學號，供工作人員核對領獎資格。');
+    studentIdInput.focus();
+    return;
+  }
+
   const roleSelect = document.getElementById('input-role');
+  const secondaryRoleSelect = document.getElementById('input-secondary-role');
+  if (!isRestore && secondaryRoleSelect.value === roleSelect.value) {
+    alert('第二職業請選擇不同於初始職業的學院，或選擇「不填寫」。');
+    secondaryRoleSelect.focus();
+    return;
+  }
+
+  state.name = document.getElementById('input-name').value || '政大冒險家';
   state.role = roleSelect.value;
-  const recomKey = roleSelect.options[roleSelect.selectedIndex].getAttribute('data-recom');
+  state.studentId = studentId;
+  state.secondaryRole = secondaryRoleSelect.value;
 
   document.getElementById('scene-create').style.display = 'none';
   document.getElementById('status-bar').style.display = 'block';
@@ -107,7 +129,10 @@ function startGame() {
 
   // 點亮所選學院的推薦建築
   document.querySelectorAll('.map-node').forEach(el => el.classList.remove('recommended'));
-  if (recomKey) {
+  for (const roleSelectElement of [roleSelect, secondaryRoleSelect]) {
+    if (!roleSelectElement.value) continue;
+    const recomKey = roleSelectElement.options[roleSelectElement.selectedIndex]
+      .getAttribute('data-recom');
     const recNode = document.getElementById(`node-${recomKey}`);
     if (recNode) recNode.classList.add('recommended');
   }
@@ -116,6 +141,122 @@ function startGame() {
   setPlayerPosition(49.5, 43.0, false);
   selectLocationPanel('start');
   updateStatus();
+  scheduleSave();
+}
+
+function saveGame() {
+  if (!state.name || isResetting) return;
+
+  const saveData = {
+    version: 2,
+    name: state.name,
+    studentId: state.studentId,
+    role: state.role,
+    secondaryRole: state.secondaryRole,
+    exp: state.exp,
+    playerX: state.playerX,
+    playerY: state.playerY,
+    doneLocations: Object.entries(state.locations)
+      .filter(([, location]) => location.done)
+      .map(([id]) => id),
+    currentLocationId,
+    scene: document.getElementById('scene-settle').style.display === 'block' ? 'settle' : 'main',
+    rewardVerified
+  };
+
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+  } catch (error) {
+    console.error('無法保存冒險進度：', error);
+  }
+}
+
+function scheduleSave() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveGame, 250);
+}
+
+function restoreGame() {
+  let rawSave;
+  try {
+    rawSave = localStorage.getItem(SAVE_KEY);
+  } catch (error) {
+    console.error('無法讀取冒險進度：', error);
+    return;
+  }
+  if (!rawSave) return;
+
+  let saved;
+  try {
+    saved = JSON.parse(rawSave);
+  } catch (error) {
+    console.error('冒險進度格式無效：', error);
+    return;
+  }
+
+  const roleSelect = document.getElementById('input-role');
+  const secondaryRoleSelect = document.getElementById('input-secondary-role');
+  const validLocationIds = Object.keys(state.locations);
+  if (
+    !saved ||
+    ![1, 2].includes(saved.version) ||
+    typeof saved.name !== 'string' ||
+    typeof saved.role !== 'string' ||
+    !Array.from(roleSelect.options).some(option => option.value === saved.role) ||
+    (saved.version === 2 && (
+      typeof saved.studentId !== 'string' ||
+      typeof saved.secondaryRole !== 'string' ||
+      (saved.secondaryRole !== '' &&
+        !Array.from(secondaryRoleSelect.options).some(option => option.value === saved.secondaryRole))
+    )) ||
+    (saved.version === 1 && saved.studentId !== undefined &&
+      typeof saved.studentId !== 'string') ||
+    !Array.isArray(saved.doneLocations) ||
+    !saved.doneLocations.every(id =>
+      validLocationIds.includes(id) && id !== 'end'
+    ) ||
+    !Number.isFinite(saved.playerX) ||
+    !Number.isFinite(saved.playerY) ||
+    !validLocationIds.includes(saved.currentLocationId) ||
+    !['main', 'settle'].includes(saved.scene) ||
+    typeof saved.rewardVerified !== 'boolean'
+  ) {
+    console.warn('冒險進度內容無效，已略過恢復。');
+    return;
+  }
+
+  state.name = saved.name || '政大冒險家';
+  state.studentId = saved.studentId || '';
+  state.role = saved.role;
+  state.secondaryRole = saved.secondaryRole || '';
+  for (const id of saved.doneLocations) {
+    state.locations[id].done = true;
+  }
+  state.exp = Object.values(state.locations)
+    .filter(location => location.done)
+    .reduce((total, location) => total + location.exp, 0);
+  rewardVerified = saved.rewardVerified;
+
+  document.getElementById('input-name').value = state.name;
+  document.getElementById('input-student-id').value = state.studentId;
+  roleSelect.value = state.role;
+  secondaryRoleSelect.value = state.secondaryRole;
+  startGame(true);
+
+  for (const id of saved.doneLocations) {
+    const node = document.getElementById(`node-${id}`);
+    if (node) {
+      node.classList.add('done');
+      node.classList.remove('recommended');
+    }
+  }
+  setPlayerPosition(saved.playerX, saved.playerY);
+  selectLocationPanel(saved.currentLocationId);
+
+  if (saved.scene === 'settle') {
+    goSettle();
+  }
+  scheduleSave();
 }
 
 // 更新角色位置與靠近偵測
@@ -134,6 +275,7 @@ function setPlayerPosition(x, y, smooth = false) {
   avatar.style.top = state.playerY + '%';
 
   checkProximity();
+  if (state.name) scheduleSave();
 }
 
 // 點擊地圖建築直接走過去
@@ -262,6 +404,7 @@ function selectLocationPanel(id) {
       action.style.display = 'block';
     }
   }
+  if (state.name) scheduleSave();
 }
 
 // 驗證企業通關密碼
@@ -351,11 +494,31 @@ function closeModal() {
   document.getElementById('modal').style.display = 'none';
 }
 
+function saveStudentId() {
+  const input = document.getElementById('legacy-student-id');
+  const studentId = input.value.trim();
+  if (!studentId) {
+    alert('請輸入學號。');
+    input.focus();
+    return;
+  }
+
+  state.studentId = studentId;
+  input.value = '';
+  goSettle();
+}
+
 // 結算所切換與核銷
 function goSettle() {
   document.getElementById('scene-main').style.display = 'none';
   document.getElementById('scene-settle').style.display = 'block';
-  document.getElementById('settle-summary').innerText = `${state.name}（${state.role}）`;
+  document.getElementById('legacy-student-id-entry').style.display =
+    state.studentId ? 'none' : 'block';
+  const roleSummary = state.secondaryRole
+    ? `主職業：${state.role}\n第二職業：${state.secondaryRole}`
+    : `職業：${state.role}`;
+  document.getElementById('settle-summary').innerText =
+    `${state.name}｜學號：${state.studentId || '舊存檔未提供'}\n${roleSummary}`;
 
   const visitedCount = Object.values(state.locations).filter(l => l.done).length;
   document.getElementById('settle-visited').innerText = `已攻略建築：${visitedCount} 處 ｜ 累積經驗：${state.exp} EXP`;
@@ -363,7 +526,11 @@ function goSettle() {
   const msg = document.getElementById('settle-status-msg');
   const btn = document.getElementById('verify-btn');
 
-  if (state.exp >= 80) {
+  if (!state.studentId) {
+    msg.innerHTML = '<span style="color: #fbbf24;">⚠️ 請先補登學號，供工作人員核對領獎資格</span>';
+    btn.disabled = true;
+    btn.style.background = '#334155';
+  } else if (state.exp >= 80) {
     msg.innerHTML = `<span style="color: #10b981; font-weight: bold;">✅ 任務達標！請由服務台人員點擊核銷</span>`;
     btn.disabled = false;
     btn.style.background = '#d97706';
@@ -372,20 +539,62 @@ function goSettle() {
     btn.disabled = true;
     btn.style.background = '#334155';
   }
+  if (rewardVerified) {
+    btn.disabled = true;
+    btn.style.background = '#475569';
+    btn.innerText = state.studentId
+      ? '✓ 已完成服務台核銷與學號登記'
+      : '✓ 已完成服務台核銷';
+  }
+  scheduleSave();
 }
 
 function backToTasks() {
   document.getElementById('scene-settle').style.display = 'none';
   document.getElementById('scene-main').style.display = 'flex';
+  scheduleSave();
+}
+
+function resetGame() {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  stopMove();
+  isResetting = true;
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch (error) {
+    isResetting = false;
+    console.error('無法清除冒險進度：', error);
+    alert('清除進度失敗，請確認瀏覽器允許此網頁使用本機儲存空間。');
+    return;
+  }
+  window.location.reload();
 }
 
 function verifyReward() {
+  if (rewardVerified || state.exp < 80 || !state.studentId) return;
+
   const btn = document.getElementById('verify-btn');
   btn.disabled = true;
   btn.style.background = '#475569';
   btn.innerText = '✓ 已完成服務台核銷與學號登記';
+  rewardVerified = true;
+  scheduleSave();
   alert('🎉 恭喜通關！請領取政大徵才月專屬周邊與抽獎券！');
 }
+
+function initializeSecondaryRoleOptions() {
+  const primarySelect = document.getElementById('input-role');
+  const secondarySelect = document.getElementById('input-secondary-role');
+  for (const option of primarySelect.options) {
+    const secondaryOption = new Option(option.text, option.value);
+    secondaryOption.setAttribute('data-recom', option.getAttribute('data-recom'));
+    secondarySelect.add(secondaryOption);
+  }
+}
+
+window.addEventListener('beforeunload', saveGame);
+initializeSecondaryRoleOptions();
+restoreGame();
 
 // 防偽動態時間戳印
 setInterval(() => {

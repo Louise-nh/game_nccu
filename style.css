@@ -379,7 +379,7 @@ input, select {
   border-radius: 6px;
   border: 2px solid var(--border);
 }
-.settle-player { margin-top: 0.75rem; font-weight: bold; font-size: 1rem; }
+.settle-player { margin-top: 0.75rem; font-weight: bold; font-size: 1rem; line-height: 1.6; white-space: pre-line; }
 .timestamp { font-family: monospace; color: var(--accent); font-size: 1.35rem; font-weight: bold; }
 
 .modal-overlay {

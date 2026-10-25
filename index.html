@@ -34,6 +34,9 @@
       歡迎踏上政大四維道！請登錄冒險者名冊並選擇所屬學院職業，進入地圖後可用「方向鍵 / 十字鍵」操控像素勇者自由探索各大企業村莊：
     </p>
     <div class="form-group">
+      <label for="input-student-id">學號（核銷時供工作人員確認）：</label>
+      <input type="text" id="input-student-id" placeholder="請輸入學號" autocomplete="off" required>
+
       <label>冒險者稱號：</label>
       <input type="text" id="input-name" placeholder="例如：四維道勇者" value="政大冒險家">
 
@@ -53,7 +56,14 @@
         <option value="X實驗學院｜無界創造者" data-recom="beauty">✨ X實驗學院｜無界創造者</option>
       </select>
 
+      <label for="input-secondary-role">第二職業／雙主修或輔系（選填）：</label>
+      <select id="input-secondary-role">
+        <option value="">不填寫</option>
+      </select>
+      <p class="hint-text">可選擇雙主修或輔系；地圖會同時標示兩種職業推薦的產業。</p>
+
       <button class="btn" onclick="startGame()">▶ 領取裝備・踏上四維道</button>
+      <p class="hint-text">學號將顯示於核銷畫面供工作人員確認。遊戲進度會自動保存在此瀏覽器，重新整理後可繼續冒險。</p>
     </div>
   </section>
 
@@ -194,6 +204,7 @@
     </div>
 
     <button class="btn btn-secondary" onclick="goSettle()">直接前往公會結算畫面 →</button>
+    <button class="btn btn-secondary" onclick="resetGame()">↻ 重新開始測試（清除本機進度）</button>
   </section>
 
   <!-- 階段 3：公會結算所核銷畫面 -->
@@ -209,10 +220,16 @@
       <div class="settle-player" id="settle-summary">冒險者</div>
       <div class="hint-text" style="margin-top: 4px;" id="settle-visited">已探索村莊：0 處</div>
       <div style="font-size: 0.9rem; margin-top: 0.5rem;" id="settle-status-msg">狀態</div>
+      <div id="legacy-student-id-entry" style="display: none; margin-top: 0.8rem; text-align: left;">
+        <label for="legacy-student-id">請補登學號以供工作人員核對：</label>
+        <input type="text" id="legacy-student-id" placeholder="請輸入學號" autocomplete="off">
+        <button class="btn" type="button" onclick="saveStudentId()">保存學號</button>
+      </div>
     </div>
 
     <button class="btn" id="verify-btn" onclick="verifyReward()">工作人員點擊確認核銷</button>
     <button class="btn btn-secondary" style="margin-top: 0.6rem;" onclick="backToTasks()">◀ 返回四維道像素地圖</button>
+    <button class="btn btn-secondary" style="margin-top: 0.6rem;" onclick="resetGame()">↻ 重新開始測試（清除本機進度）</button>
   </section>
 </div>
 
