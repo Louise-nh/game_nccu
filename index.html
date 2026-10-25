@@ -154,20 +154,14 @@
             <rect class="leg-right" x="9" y="13" width="3" height="3" fill="#1e293b"/>
           </svg>
         </div>
+
+        <div class="map-joystick" id="map-joystick" aria-label="圓形虛擬搖桿" role="application">
+          <div class="joystick-knob" id="joystick-knob"></div>
+        </div>
       </div>
 
-      <!-- 手機與網頁通用：虛擬十字方向鍵 (D-Pad) -->
       <div class="controls-bar">
-        <div class="controls-tip">🕹️ 靠近建築物自動觸發任務對話，或直接點擊地圖圖標移動</div>
-        <div class="dpad">
-          <button class="dpad-btn up" onmousedown="startMove(0, -1)" onmouseup="stopMove()" ontouchstart="startMove(0, -1); event.preventDefault();" ontouchend="stopMove()">▲</button>
-          <div class="dpad-middle">
-            <button class="dpad-btn left" onmousedown="startMove(-1, 0)" onmouseup="stopMove()" ontouchstart="startMove(-1, 0); event.preventDefault();" ontouchend="stopMove()">◀</button>
-            <div class="dpad-center"></div>
-            <button class="dpad-btn right" onmousedown="startMove(1, 0)" onmouseup="stopMove()" ontouchstart="startMove(1, 0); event.preventDefault();" ontouchend="stopMove()">▶</button>
-          </div>
-          <button class="dpad-btn down" onmousedown="startMove(0, 1)" onmouseup="stopMove()" ontouchstart="startMove(0, 1); event.preventDefault();" ontouchend="stopMove()">▼</button>
-        </div>
+        <div class="controls-tip">🕹️ 拖曳地圖右下角搖桿任意方向移動；靠近建築物自動觸發任務，或點擊地圖圖標前往</div>
       </div>
 
       <!-- RPG 對話框面板 -->

@@ -3,6 +3,8 @@ let moveInterval = null;
 let saveTimeout = null;
 let rewardVerified = false;
 let isResetting = false;
+let joystickPointerId = null;
+const joystickVector = { dx: 0, dy: 0 };
 const keysPressed = {};
 const SAVE_KEY = 'nccu-career-adventure-save';
 
@@ -332,8 +334,72 @@ function stopMove() {
     clearInterval(moveInterval);
     moveInterval = null;
   }
+  joystickVector.dx = 0;
+  joystickVector.dy = 0;
+  joystickPointerId = null;
+  const knob = document.getElementById('joystick-knob');
+  if (knob) knob.style.transform = 'translate(-50%, -50%)';
   const avatar = document.getElementById('player-avatar');
   if (avatar) avatar.classList.remove('walking');
+}
+
+function updateJoystick(event) {
+  const joystick = document.getElementById('map-joystick');
+  const knob = document.getElementById('joystick-knob');
+  const bounds = joystick.getBoundingClientRect();
+  const centerX = bounds.left + bounds.width / 2;
+  const centerY = bounds.top + bounds.height / 2;
+  const maxDistance = (bounds.width - knob.offsetWidth) / 2;
+  let offsetX = event.clientX - centerX;
+  let offsetY = event.clientY - centerY;
+  const distance = Math.hypot(offsetX, offsetY);
+
+  if (distance > maxDistance) {
+    offsetX = offsetX / distance * maxDistance;
+    offsetY = offsetY / distance * maxDistance;
+  }
+  knob.style.transform =
+    `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px))`;
+
+  const magnitude = Math.min(distance / maxDistance, 1);
+  if (magnitude < 0.12) {
+    joystickVector.dx = 0;
+    joystickVector.dy = 0;
+    return;
+  }
+  const speed = (magnitude - 0.12) / 0.88;
+  joystickVector.dx = offsetX / (distance || 1) * speed;
+  joystickVector.dy = offsetY / (distance || 1) * speed;
+}
+
+function startJoystick(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+  event.preventDefault();
+  stopMove();
+  joystickPointerId = event.pointerId;
+  event.currentTarget.setPointerCapture(event.pointerId);
+  updateJoystick(event);
+  document.getElementById('player-avatar').classList.add('walking');
+  moveInterval = setInterval(() => {
+    const speed = 1.95;
+    if (joystickVector.dx || joystickVector.dy) {
+      setPlayerPosition(
+        state.playerX + joystickVector.dx * speed,
+        state.playerY + joystickVector.dy * speed
+      );
+    }
+  }, 50);
+}
+
+function moveJoystick(event) {
+  if (event.pointerId !== joystickPointerId) return;
+  event.preventDefault();
+  updateJoystick(event);
+}
+
+function stopJoystick(event) {
+  if (event.pointerId !== joystickPointerId) return;
+  stopMove();
 }
 
 // 鍵盤 WASD 與方向鍵支援
@@ -599,6 +665,12 @@ function initializeSecondaryRoleOptions() {
 
 window.addEventListener('beforeunload', saveGame);
 initializeSecondaryRoleOptions();
+const joystick = document.getElementById('map-joystick');
+joystick.addEventListener('pointerdown', startJoystick);
+joystick.addEventListener('pointermove', moveJoystick);
+joystick.addEventListener('pointerup', stopJoystick);
+joystick.addEventListener('pointercancel', stopJoystick);
+joystick.addEventListener('lostpointercapture', stopMove);
 restoreGame();
 
 // 防偽動態時間戳印
