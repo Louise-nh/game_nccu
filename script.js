@@ -683,7 +683,7 @@ function resetGame() {
 }
 
 function verifyReward() {
-  if (rewardVerified || state.exp < 80 || !state.studentId) return;
+  if (rewardVerified || state.exp < 40 || !state.studentId) return;
 
   const btn = document.getElementById('verify-btn');
   btn.disabled = true;
