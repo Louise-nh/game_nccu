@@ -4,6 +4,8 @@ let saveTimeout = null;
 let rewardVerified = false;
 let isResetting = false;
 let joystickPointerId = null;
+let scannerStream = null;
+let scannerFrame = null;
 const joystickVector = { dx: 0, dy: 0 };
 const keysPressed = {};
 const SAVE_KEY = 'nccu-career-adventure-save';
@@ -403,7 +405,7 @@ function stopJoystick(event) {
 
 // 鍵盤 WASD 與方向鍵支援
 window.addEventListener('keydown', (e) => {
-  // 若使用者正在輸入密語或名字，不攔截按鍵
+  // 若使用者正在輸入表單內容，不攔截按鍵
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
   if (document.getElementById('scene-main').style.display === 'none') return;
 
@@ -463,7 +465,7 @@ function selectLocationPanel(id) {
     status.style.background = state.exp >= 40 ? '#059669' : '#451a03';
   } else {
     settleBtn.style.display = 'none';
-    tip.innerText = `💡 測試密語：輸入 ${loc.code} 解鎖此建築`;
+    tip.innerText = '📷 QR Code 需由對應企業攤位提供';
     if (loc.done) {
       status.innerText = '✓ 已討伐完成';
       status.style.background = '#059669';
@@ -477,18 +479,17 @@ function selectLocationPanel(id) {
   if (state.name) scheduleSave();
 }
 
-// 驗證企業通關密碼
-function submitPanelCode() {
-  const input = document.getElementById('panel-code-input');
-  const val = input.value.trim().toUpperCase();
+// 驗證企業 QR Code 內容
+function submitPanelCode(scannedValue) {
+  const val = scannedValue.trim().toUpperCase();
   const loc = state.locations[currentLocationId];
 
   if (!loc || loc.done) return;
 
   if (val === loc.code) {
+    closeQrScanner();
     loc.done = true;
     state.exp += loc.exp;
-    input.value = '';
 
     const nodeEl = document.getElementById(`node-${currentLocationId}`);
     if (nodeEl) {
@@ -500,8 +501,72 @@ function submitPanelCode() {
     selectLocationPanel(currentLocationId);
     updateStatus();
   } else {
-    alert(`密語錯誤！Demo 測試請輸入：${loc.code}`);
+    document.getElementById('scanner-status').innerText =
+      '這不是目前據點的 QR Code，請掃描正確攤位 QR Code。';
   }
+}
+
+async function openQrScanner() {
+  const modal = document.getElementById('qr-scanner-modal');
+  const video = document.getElementById('qr-video');
+  const status = document.getElementById('scanner-status');
+  modal.style.display = 'flex';
+
+  if (!('BarcodeDetector' in window)) {
+    status.innerText = '此瀏覽器不支援 QR Code 掃描，請改用支援 BarcodeDetector 的瀏覽器。';
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    status.innerText = '目前頁面無法使用相機，請透過 HTTPS 或 localhost 開啟。';
+    return;
+  }
+
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false
+    });
+    video.srcObject = scannerStream;
+    await video.play();
+    status.innerText = '請將 QR Code 對準相機畫面中央…';
+    scanQrFrame();
+  } catch (error) {
+    console.error('無法啟用 QR Code 掃描相機：', error);
+    status.innerText = '無法啟用相機，請確認已授權相機權限，並透過 HTTPS 或 localhost 開啟。';
+  }
+}
+
+async function scanQrFrame() {
+  if (!scannerStream) return;
+
+  try {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const video = document.getElementById('qr-video');
+    const barcodes = await detector.detect(video);
+    if (barcodes.length > 0 && barcodes[0].rawValue) {
+      submitPanelCode(barcodes[0].rawValue);
+      return;
+    }
+  } catch (error) {
+    console.error('QR Code 掃描失敗：', error);
+    document.getElementById('scanner-status').innerText = 'QR Code 掃描失敗，請重新開啟相機再試一次。';
+    return;
+  }
+
+  scannerFrame = requestAnimationFrame(scanQrFrame);
+}
+
+function closeQrScanner() {
+  if (scannerFrame) cancelAnimationFrame(scannerFrame);
+  scannerFrame = null;
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(track => track.stop());
+    scannerStream = null;
+  }
+  const video = document.getElementById('qr-video');
+  video.pause();
+  video.srcObject = null;
+  document.getElementById('qr-scanner-modal').style.display = 'none';
 }
 
 function updateStatus() {
@@ -584,20 +649,10 @@ function openModal(type) {
     `;
   } else if (type === 'tips') {
     title.innerText = '💡 博覽會實戰錦囊';
-    content.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">1. 開場 30 秒簡介「科系＋一項實作或社團經驗」。<br>2. 挑 1~2 題破冰卡問題深度交流，展現事前準備。<br>3. 結束前主動向攤位小天使索取通關密語！</p>`;
+    content.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">1. 開場 30 秒簡介「科系＋一項實作或社團經驗」。<br>2. 挑 1~2 題破冰卡問題深度交流，展現事前準備。<br>3. 結束前主動向攤位小天使索取 QR Code，返回地圖後開啟相機掃描！</p>`;
   } else if (type === 'info') {
-    title.innerText = '🔑 各建築測試密語一覽';
-    content.innerHTML = `
-      <ul style="font-family: monospace;">
-        <li>四維堂 (Si Wei Hall)：<strong>START2027</strong> (+20)</li>
-        <li>總圖 (Main Library)：<strong>BOOK2027</strong> (+30)</li>
-        <li>行政大樓 (Admin Bldg)：<strong>FIN2027</strong> (+30)</li>
-        <li>商學院 (Commerce)：<strong>BEAUTY2027</strong> (+30)</li>
-        <li>志希樓 (Zhi Xi Bldg)：<strong>MEDIA2027</strong> (+30)</li>
-        <li>果夫樓 (Guo Fu Bldg)：<strong>FLY2027</strong> (+30)</li>
-        <li>資訊大樓 (Info Bldg)：<strong>TECH2027</strong> (+30)</li>
-      </ul>
-    `;
+    title.innerText = '📷 QR Code 掃描指南';
+    content.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">完成攤位互動後，請向攤位小天使取得對應 QR Code。回到該據點面板，點擊「開啟相機掃描 QR Code」，允許相機權限並將 QR Code 對準畫面中央。</p>`;
   }
   modal.style.display = 'flex';
 }

@@ -441,6 +441,17 @@ input, select {
   width: 100%;
   border: 2px solid var(--accent);
 }
+.scanner-modal { text-align: center; }
+.scanner-status { min-height: 2.4rem; margin: 0.75rem 0; line-height: 1.4; }
+.qr-video {
+  width: 100%;
+  min-height: 220px;
+  margin-bottom: 1rem;
+  background: #090a0f;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  object-fit: cover;
+}
 .modal ul {
   margin-left: 1.2rem;
   color: var(--text-muted);

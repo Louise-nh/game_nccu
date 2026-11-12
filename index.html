@@ -106,7 +106,7 @@
       <div class="inventory-grid">
         <div class="item-slot highlight-slot" onclick="openModal('card')">📜<br>破冰攻略卡</div>
         <div class="item-slot" onclick="openModal('tips')">💡<br>面試錦囊</div>
-        <div class="item-slot" onclick="openModal('info')">🔑<br>demo測試密碼表</div>
+        <div class="item-slot" onclick="openModal('info')">📷<br>QR Code掃描指南</div>
       </div>
     </div>
 
@@ -208,14 +208,11 @@
           <div class="company-tags" id="panel-companies"></div>
         </div>
 
-        <!-- 輸入企業通關密語 -->
+        <!-- 掃描企業 QR Code -->
         <div id="panel-action" class="dialog-action">
-          <label class="hint-text">與企業完成對話後，輸入攤位小天使給予的密語：</label>
-          <div class="code-input-row">
-            <input type="text" id="panel-code-input" placeholder="輸入密語">
-            <button class="btn code-submit-btn" onclick="submitPanelCode()">攻略核銷</button>
-          </div>
-          <div class="code-tip" id="panel-tip">提示</div>
+          <label class="hint-text">與企業完成對話後，掃描攤位提供的 QR Code：</label>
+          <button class="btn" type="button" onclick="openQrScanner()">📷 開啟相機掃描 QR Code</button>
+          <div class="code-tip" id="panel-tip">請允許瀏覽器使用相機</div>
         </div>
 
         <!-- 結算所專屬跳轉按鈕 -->
@@ -261,6 +258,16 @@
     <h3 id="modal-title" class="accent-text">裝備道具</h3>
     <div id="modal-content" style="margin: 1rem 0;"></div>
     <button class="btn" onclick="closeModal()">關閉視窗</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="qr-scanner-modal" onclick="closeQrScanner()">
+  <div class="modal scanner-modal" onclick="event.stopPropagation()">
+    <h3 class="accent-text">📷 掃描據點 QR Code</h3>
+    <p class="hint-text scanner-status" id="scanner-status">正在準備相機…</p>
+    <video id="qr-video" class="qr-video" autoplay muted playsinline></video>
+    <canvas id="qr-canvas" hidden></canvas>
+    <button class="btn btn-secondary" type="button" onclick="closeQrScanner()">關閉相機</button>
   </div>
 </div>
 
