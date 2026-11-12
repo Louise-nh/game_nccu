@@ -58,6 +58,53 @@ body {
   gap: 8px;
 }
 
+.adventure-dashboard { border-color: #7c3aed; }
+.quest-list { display: grid; gap: 0.55rem; margin-top: 0.75rem; }
+.quest-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem;
+  background: var(--card-inner);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+.quest-icon { font-size: 1.15rem; }
+.quest-copy { display: flex; flex: 1; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.quest-copy strong { font-size: 0.82rem; color: var(--text); }
+.quest-copy span { color: var(--text-muted); font-size: 0.72rem; line-height: 1.35; }
+.quest-status {
+  color: #fbbf24;
+  border: 1px solid #92400e;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  padding: 0.2rem 0.35rem;
+  white-space: nowrap;
+}
+.quest-status.completed {
+  color: #6ee7b7;
+  border-color: #059669;
+  background: #064e3b;
+}
+.reward-track {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  margin-top: 0.8rem;
+}
+.reward-step {
+  padding: 0.45rem 0.2rem;
+  text-align: center;
+  background: #111827;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+.reward-step.unlocked { color: #fde68a; border-color: #d97706; background: #451a03; }
+.reward-step.current { box-shadow: 0 0 0 2px #fbbf24 inset; }
+
 .status-bottom {
   display: flex;
   justify-content: space-between;

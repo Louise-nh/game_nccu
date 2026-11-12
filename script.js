@@ -91,7 +91,7 @@ const state = {
     end: {
       title: '🏆 四維堂・公會結算所',
       pos: '📍 座標：四維堂服務台',
-      desc: '冒險終點！當累積滿 80 EXP（約探索 3 個展區），即可在四維堂服務台開啟防偽時間戳印，兌換周邊紀念品與抽獎券！',
+      desc: '冒險終點！累積滿 40 EXP 即可在四維堂服務台開啟防偽時間戳印，依等級兌換周邊紀念品與抽獎券！',
       companies: ['四維堂服務台兌獎處', '一番賞摸彩箱', 'Prism 拍立得打卡站'],
       x: 49.5, y: 54.0
     }
@@ -459,8 +459,8 @@ function selectLocationPanel(id) {
   if (id === 'end') {
     action.style.display = 'none';
     settleBtn.style.display = 'block';
-    status.innerText = state.exp >= 80 ? '✓ 可結算兌獎' : `尚差 ${80 - state.exp} EXP`;
-    status.style.background = state.exp >= 80 ? '#059669' : '#451a03';
+    status.innerText = state.exp >= 40 ? '✓ 可結算兌獎' : `尚差 ${40 - state.exp} EXP`;
+    status.style.background = state.exp >= 40 ? '#059669' : '#451a03';
   } else {
     settleBtn.style.display = 'none';
     tip.innerText = `💡 測試密語：輸入 ${loc.code} 解鎖此建築`;
@@ -506,23 +506,65 @@ function submitPanelCode() {
 
 function updateStatus() {
   document.getElementById('exp-text').innerText = state.exp;
-  document.getElementById('exp-fill').style.width = Math.min(state.exp, 100) + '%';
+  document.getElementById('exp-fill').style.width = Math.min((state.exp / 120) * 100, 100) + '%';
   const lvl = document.getElementById('player-level');
   const rank = document.getElementById('rank-title');
 
-  if (state.exp >= 80) {
-    lvl.innerText = 'MAX';
-    rank.innerText = '四維道傳奇勇者';
-  } else if (state.exp >= 50) {
+  if (state.exp >= 120) {
     lvl.innerText = '3';
-    rank.innerText = '資深探險家';
-  } else if (state.exp >= 20) {
+    rank.innerText = '四維道傳奇勇者';
+  } else if (state.exp >= 80) {
     lvl.innerText = '2';
+    rank.innerText = '資深探險家';
+  } else if (state.exp >= 40) {
+    lvl.innerText = '1';
     rank.innerText = '進階冒險者';
   } else {
     lvl.innerText = '1';
     rank.innerText = '新手見習生';
   }
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const completedLocations = Object.entries(state.locations)
+    .filter(([id, location]) => id !== 'start' && id !== 'end' && location.done);
+  const villages = new Set(completedLocations.map(([id]) => id));
+  const explorationComplete = completedLocations.length >= 3 && villages.size >= 2;
+  const locationCount = Object.values(state.locations).filter(location => location.done).length;
+  const locationComplete = locationCount >= 7;
+
+  document.getElementById('quest-exploration-progress').innerText =
+    `探索 ${Math.min(completedLocations.length, 3)} / 3 棟建築，跨越 ${Math.min(villages.size, 2)} / 2 個領域`;
+  document.getElementById('quest-location-progress').innerText =
+    `完成 ${locationCount} / 7 個據點`;
+  setQuestStatus('quest-exploration-status', explorationComplete);
+  setQuestStatus('quest-location-status', locationComplete);
+
+  const nextThreshold = [40, 80, 120].find(threshold => state.exp < threshold);
+  document.getElementById('dashboard-exp-hint').innerText = nextThreshold
+    ? `距離 Lv.${nextThreshold === 40 ? 1 : nextThreshold === 80 ? 2 : 3} 還有 ${nextThreshold - state.exp} EXP`
+    : '已達最高等級，歡迎回四維堂兌獎';
+
+  const rewards = [
+    { label: 'Lv.0', threshold: 0, name: '新手包' },
+    { label: 'Lv.1', threshold: 40, name: '獎勵一' },
+    { label: 'Lv.2', threshold: 80, name: '獎勵二' },
+    { label: 'Lv.3', threshold: 120, name: '最高獎' }
+  ];
+  document.getElementById('reward-track').innerHTML = rewards.map(reward => `
+    <div class="reward-step ${state.exp >= reward.threshold ? 'unlocked' : ''} ${
+      state.exp < reward.threshold && (!nextThreshold || reward.threshold === nextThreshold) ? 'current' : ''
+    }">
+      <strong>${state.exp >= reward.threshold ? '✓ ' : ''}${reward.label}</strong><br>${reward.name}
+    </div>
+  `).join('');
+}
+
+function setQuestStatus(id, completed) {
+  const element = document.getElementById(id);
+  element.innerText = completed ? '已完成' : '進行中';
+  element.classList.toggle('completed', completed);
 }
 
 // 背包道具彈窗
@@ -600,12 +642,12 @@ function goSettle() {
     msg.innerHTML = '<span style="color: #fbbf24;">⚠️ 請先補登學號，供工作人員核對領獎資格</span>';
     btn.disabled = true;
     btn.style.background = '#334155';
-  } else if (state.exp >= 80) {
+  } else if (state.exp >= 40) {
     msg.innerHTML = `<span style="color: #10b981; font-weight: bold;">✅ 任務達標！請由服務台人員點擊核銷</span>`;
     btn.disabled = false;
     btn.style.background = '#d97706';
   } else {
-    msg.innerHTML = `<span style="color: #fbbf24;">⚠️ 尚差 ${80 - state.exp} EXP 解鎖兌獎（建議再逛 1~2 棟建築）</span>`;
+    msg.innerHTML = `<span style="color: #fbbf24;">⚠️ 尚差 ${40 - state.exp} EXP 解鎖兌獎（建議再逛 1~2 棟建築）</span>`;
     btn.disabled = true;
     btn.style.background = '#334155';
   }

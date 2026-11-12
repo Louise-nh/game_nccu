@@ -23,7 +23,7 @@
       <div class="exp-bar-fill" id="exp-fill"></div>
     </div>
     <div class="status-bottom">
-      <span>EXP: <span id="exp-text">0</span> / 100（滿 80 EXP 回四維堂兌獎）</span>
+      <span>EXP: <span id="exp-text">0</span> / 120（40/80/120 EXP 解鎖獎勵）</span>
       <span id="rank-title">新手見習生</span>
     </div>
   </header>
@@ -70,6 +70,33 @@
 
   <!-- 階段 2：像素地圖與自由行走探索 -->
   <section id="scene-main" style="display: none; flex-direction: column; gap: 1rem;">
+    <!-- 任務與獎勵儀表板 -->
+    <div class="pixel-box adventure-dashboard">
+      <div class="section-header">
+        <h3>📜 冒險任務進度</h3>
+        <span class="hint-text" id="dashboard-exp-hint">距離下一級還有 40 EXP</span>
+      </div>
+      <div class="quest-list">
+        <div class="quest-row">
+          <div class="quest-icon">🗺️</div>
+          <div class="quest-copy">
+            <strong>跨領域企業探索</strong>
+            <span id="quest-exploration-progress">探索 0 / 3 棟建築，跨越 0 / 2 個領域</span>
+          </div>
+          <span class="quest-status" id="quest-exploration-status">進行中</span>
+        </div>
+        <div class="quest-row">
+          <div class="quest-icon">🎯</div>
+          <div class="quest-copy">
+            <strong>職涯冒險據點</strong>
+            <span id="quest-location-progress">完成 0 / 7 個據點</span>
+          </div>
+          <span class="quest-status" id="quest-location-status">進行中</span>
+        </div>
+      </div>
+      <div class="reward-track" id="reward-track" aria-label="等級獎勵進度"></div>
+    </div>
+
     <!-- 數位背包 -->
     <div class="pixel-box">
       <div class="section-header">
